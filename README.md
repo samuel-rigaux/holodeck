@@ -40,7 +40,7 @@ Tout d'abord on crée et on configure les VMs sur VMWare de cette manière :
     nano /etc/dhcp/dhcpd.conf
 
 
-Exemple de configuration pour le réseau `192.168.80.0/24` :
+Exemple de configuration pour le réseau `172.16.0.0/16` :
 
     option domain-name "starfleet.lan";  
     option domain-name-servers 172.16.0.100; # IP du serveur DNS (modifier si besoin)
