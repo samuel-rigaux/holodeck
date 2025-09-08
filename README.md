@@ -43,18 +43,18 @@ Tout d'abord on crée et on configure les VMs sur VMWare de cette manière :
 Exemple de configuration pour le réseau `192.168.80.0/24` :
 
     option domain-name "starfleet.lan";  
-    option domain-name-servers 192.168.80.200; # IP du serveur DNS (modifier si besoin)
+    option domain-name-servers 172.16.0.100; # IP du serveur DNS (modifier si besoin)
     
     default-lease-time 600;  
     max-lease-time 7200;  
     authoritative;
     
-    subnet 192.168.80.0 netmask 255.255.255.0 {  
-    range 192.168.80.5 192.168.80.10;  
-    option routers 192.168.80.2; # Passerelle réseau  
-    option subnet-mask 255.255.255.0;  
-    option broadcast-address 192.168.80.255;  
-    option domain-name-servers 192.168.80.200;  
+    subnet 172.17.0.100 netmask 255.255.0.0 {  
+    range 172.17.0.5 172.17.0.10;  
+    option routers 172.17.0.2; # Passerelle réseau  
+    option subnet-mask 255.255.0.0;  
+    option broadcast-address 172.17.255.255;  
+    option domain-name-servers 172.16.0.100;  
     option domain-name "starfleet.lan";  
     }
 
