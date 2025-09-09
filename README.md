@@ -4,7 +4,7 @@
 - [Configuration des VMs](#configuration-des-vms)
 - [DHCP](#dhcp)
 - [DNS](#dns)
-- 
+- [NGINX](#nginx)
 
 
 ## Configuration des VMs
@@ -268,6 +268,166 @@ Depuis le serveur (et aussi, idéalement, depuis un client avec DNS configuré)�
 - [Page de manuel BIND](https://www.isc.org/bind/)
 
 ---
+
+
+# NGINX
+
+## Sommaire
+
+- [Installation de NGINX depuis le dépôt officiel](#installation-de-nginx-depuis-le-dépôt-officiel)
+- [Configuration de base de NGINX](#configuration-de-base-de-nginx)
+- [Test du serveur web](#test-du-serveur-web)
+- [Dépannage (erreurs fréquentes)](#dépannage-erreurs-fréquentes)
+- [Ressources](#ressources)
+
+---
+
+## Installation de NGINX depuis le dépôt officiel
+
+### 1. Ajouter la clé GPG officielle et le dépôt NGINX.ORG
+
+    apt update  
+    
+    apt install curl gnupg2 ca-certificates lsb-release -y  
+    
+    curl [https://nginx.org/keys/nginx_signing.key]
+    (https://nginx.org/keys/nginx_signing.key) | gpg --dearmor | sudo tee 
+    /etc/apt/trusted.gpg.d/nginx.gpg > /dev/null  
+    
+    echo "deb [http://nginx.org/packages/debian]
+    (http://nginx.org/packages/debian) $(lsb_release -cs) nginx" | sudo tee 
+    /etc/apt/sources.list.d/nginx.list  
+    
+    echo -e "Package: *\nPin: origin nginx.org\nPin-Priority: 900\n" | sudo 
+    tee /etc/apt/preferences.d/99nginx  
+    
+    apt update
+
+
+### 2. Installer NGINX (toute dernière version)
+
+    apt install nginx  
+    nginx -v
+
+Doit afficher : nginx version: nginx/1.28.0
+
+
+---
+
+## Configuration de base de NGINX
+
+### 1. **Vérifier que le service est actif**
+
+    sudo systemctl status nginx
+
+Tu dois voir **active (running)**.  
+
+Sinon, démarre le :
+
+    sudo systemctl start nginx
+
+
+### 2. **Configuration minimale du site par défaut**
+
+Modifie `/etc/nginx/conf.d/default.conf` (fichier par défaut du dépôt nginx.org) :
+
+    server {  
+    listen 80;  
+    server_name _;
+    
+    root /usr/share/nginx/html;
+    index index.html index.htm;
+    
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+
+### 3. **Personnaliser la page d'accueil**
+
+
+    nano /usr/share/nginx/html/index.html
+
+Ajoute, par exemple :
+
+    Bienvenue sur le serveur NGINX 1.28 (starfleet.lan)
+
+### 4.  **Tester et recharger la configuration**
+
+    sudo nginx -t
+    sudo systemctl restart nginx
+    
+## Test du serveur web
+
+### 1. Test en local :
+
+    curl -I http://localhost
+
+Tu dois avoir une réponse 200 OK.
+
+### 2. Test depuis une autre machine du réseau (navigateur ou console) :
+
+-   URL :  `http://172.16.0.100`
+    
+-   Ou :
+- 
+
+`curl -I http://172.16.0.100`
+
+_Modifie l’IP si nécessaire selon ta config réseau !_
+
+
+## Dépannage (erreurs fréquentes)
+
+### 1.  **Port 80 déjà utilisé**
+
+**Erreur vue** :  
+`bind() to 0.0.0.0:80 failed (98: Address already in use)`
+
+-   Cause : un autre serveur web (ex. Apache2) écoute déjà.
+    
+-   Solution :
+  `systemctl stop apache2
+  systemctl disable apache2
+  systemctl restart nginx`
+
+### 2.  **Nginx démarre, mais page inaccessible**
+
+-   Vérifie firewall local :
+
+  `ufw allow 80/tcp`
+
+-   Vérifie la config de l’interface réseau de la VM et du bridge dans VMware.
+
+### 3.  **Erreur SSL/certificat (si HTTPS activé)**
+
+-   Message :  `cannot load certificate ...`
+    
+-   Solution : vérifie les chemins et droits du certificat & clé dans la conf (voir doc SSL de NGINX).  
+    Génère un certificat auto-signé en cas de doute :
+
+   
+
+    `sudo openssl req -x509 -days 365 -newkey rsa:2048 -nodes \  
+     -keyout /etc/ssl/private/nginx-selfsigned.key \  
+     -out /etc/ssl/certs/nginx-selfsigned.crt \  -subj "/CN=starfleet.lan"`
+
+
+### 4.  **La configuration est correcte (`nginx -t`  OK) mais le service ne démarre pas**
+
+-   Toujours vérifier le log détaillé :
+
+  `journalctl -xeu nginx.service`
+    
+
+## Ressources
+
+-   [Docs Officielles NGINX](https://nginx.org/en/docs/)
+    
+-   [Q&A Nginx nginx.org vs Debian](https://www.nginx.com/resources/wiki/start/topics/tutorials/install/)
+    
+-   [Page de manuel Debian](https://wiki.debian.org/Nginx)
+
 
 
 
