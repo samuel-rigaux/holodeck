@@ -5,6 +5,7 @@
 - [DHCP](#dhcp)
 - [DNS](#dns)
 - [NGINX](#nginx)
+- [PHP](#php)
 
 
 ## Configuration des VMs
