@@ -430,6 +430,251 @@ _Modifie l’IP si nécessaire selon ta config réseau !_
 
 
 
+# PHP
+
+>  🌌 Installation et Configuration multi-PHP (7.x & 8.x) sur NGINX +
+> Debian 12
+
+## Sommaire
+
+- [Objectif](#objectif)
+- [Pré-requis](#pré-requis)
+- [Étape 1 - Installation de NGINX depuis le dépôt officiel](#étape-1---installation-de-nginx-depuis-le-dépôt-officiel)
+- [Étape 2 - Ajout de PHP 7.x & PHP 8.x depuis le dépôt Sury.org](#étape-2---ajout-de-php-7x--php-8x-depuis-le-dépôt-suryorg)
+- [Étape 3 - Configuration PHP-FPM (sockets)](#étape-3---configuration-php-fpm-sockets)
+- [Étape 4 - Création des virtual hosts NGINX](#étape-4---création-des-virtual-hosts-nginx)
+- [Étape 5 - Préparation des dossiers et pages de test](#étape-5---préparation-des-dossiers-et-pages-de-test)
+- [Étape 6 - Installation de phpMyAdmin](#étape-6---installation-de-phpmyadmin)
+- [Étape 7 - Test d'accès & vérification PHP](#étape-7---test-daccès--vérification-php)
+- [Dépannages et difficultés rencontrées](#dépannages-et-difficultés-rencontrées)
+- [Ressources utiles](#ressources-utiles)
+
+---
+
+## Objectif
+
+Installer un environnement web sous Debian 12 permettant :
+- De faire cohabiter **PHP 7.x** et **PHP 8.x** en parallèle avec NGINX (versions récentes hors dépôts Debian).
+- Héberger plusieurs sites sur différents virtual hosts :
+  - **www8.starfleet.lan** → site web avec PHP 8
+  - **www7.starfleet.lan** → site web avec PHP 7
+  - **php.starfleet.lan** → interface phpMyAdmin
+  - **admin.starfleet.lan** → interface d’administration statique
+
+---
+
+## Pré-requis
+
+- Deux machines/VM sur le même réseau LAN (ex : 172.17.0.100 serveur, 172.17.0.5 client)
+- Accès root/sudo sur le serveur Debian 12
+- DNS LAN ou modifications du fichier `/etc/hosts` côté client pour les sous-domaines
+- Pas d’Apache ou autre serveur web actif occupant le port 80
+
+---
+
+## Étape 1 - Installation de NGINX depuis le dépôt officiel
+
+    sudo apt update  
+    sudo apt install curl gnupg2 ca-certificates lsb-release -y  
+    curl [https://nginx.org/keys/nginx_signing.key](https://nginx.org/keys/nginx_signing.key) | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/nginx.gpg > /dev/null  
+    echo "deb [http://nginx.org/packages/debian](http://nginx.org/packages/debian) $(lsb_release -cs) nginx" | sudo tee /etc/apt/sources.list.d/nginx.list  
+    echo -e "Package: *\nPin: origin nginx.org\nPin-Priority: 900\n" | sudo tee /etc/apt/preferences.d/99nginx  
+    sudo apt update  
+    sudo apt install nginx
+
+*Vérifie la version :*
+
+    nginx -v
+
+> nginx version: nginx/1.28.x
+
+
+---
+
+## Étape 2 - Ajout de PHP 7.x & PHP 8.x depuis le dépôt Sury.org
+
+
+    apt install -y ca-certificates apt-transport-https software-properties-common  
+    wget -qO /etc/apt/trusted.gpg.d/php.gpg [https://packages.sury.org/php/apt.gpg](https://packages.sury.org/php/apt.gpg)  
+    echo "deb [https://packages.sury.org/php/](https://packages.sury.org/php/) $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/php.list  
+    apt update  
+    apt install php7.4-fpm php7.4-mysql php7.4-curl php7.4-mbstring  
+    apt install php8.1-fpm php8.1-mysql php8.1-curl php8.1-mbstring
+
+
+---
+
+## Étape 3 - Configuration PHP-FPM (sockets)
+
+Vérifie la présence des sockets via :
+
+    ls -l /run/php/
+    
+Les fichiers suivants doivent apparaître :
+- `/run/php/php7.4-fpm.sock`
+- `/run/php/php8.1-fpm.sock`
+
+Les services doivent être actifs :
+
+    systemctl status php7.4-fpm  
+    systemctl status php8.1-fpm
+
+---
+
+## Étape 4 - Création des virtual hosts NGINX
+
+Crée un fichier de conf par site dans `/etc/nginx/conf.d/` :
+
+### www8.starfleet.lan (PHP 8)
+
+    server {  
+    listen 80;  
+    server_name www8.starfleet.lan;  
+    root /var/www/www8;  
+    index index.php index.html;  
+    location / {  
+    try_files $uri $uri/ =404;  
+    }  
+    location ~ .php$ {  
+    include fastcgi_params;  
+    fastcgi_pass unix:/run/php/php8.1-fpm.sock;  
+    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;  
+    }  
+    }
+
+
+### www7.starfleet.lan (PHP 7)
+
+
+    server {  
+    listen 80;  
+    server_name www7.starfleet.lan;  
+    root /var/www/www7;  
+    index index.php index.html;  
+    location / {  
+    try_files $uri $uri/ =404;  
+    }  
+    location ~ .php$ {  
+    include fastcgi_params;  
+    fastcgi_pass unix:/run/php/php7.4-fpm.sock;  
+    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;  
+    }  
+    }
+
+
+### php.starfleet.lan (phpMyAdmin, via PHP 8)
+
+    server {  
+    listen 80;  
+    server_name php.starfleet.lan;  
+    root /usr/share/phpmyadmin;  
+    index index.php;  
+    location / {  
+    try_files $uri $uri/ =404;  
+    }  
+    location ~ .php$ {  
+    include fastcgi_params;  
+    fastcgi_pass unix:/run/php/php8.1-fpm.sock;  
+    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;  
+    }  
+    }
+
+
+### admin.starfleet.lan (statique)
+
+    server {  
+    listen 80;  
+    server_name admin.starfleet.lan;  
+    root /var/www/admin;  
+    index index.html;  
+    location / {  
+    try_files $uri $uri/ =404;  
+    }  
+    }
+
+
+⚠️ **Attention à bien nommer les `server_name` et à retirer tout site par défaut gênant dans les confs !**
+
+---
+
+## Étape 5 - Préparation des dossiers et pages de test
+
+    mkdir -p /var/www/www8 /var/www/www7 /var/www/admin  
+    echo "<?php phpinfo(); ?>" | sudo tee /var/www/www8/phpinfo.php  
+    echo "<?php phpinfo(); ?>" | sudo tee /var/www/www7/phpinfo.php  
+    echo "<h1>Administration VM</h1>" | sudo tee /var/www/admin/index.html  
+    chown -R www-data:www-data /var/www  
+    chmod -R 755 /var/www
+
+---
+
+## Étape 6 - Installation de phpMyAdmin
+
+    apt install phpmyadmin
+
+Lors de l'installation, choisis "apache2" (même si tu utilises NGINX, on sert quand même les fichiers).
+
+La racine de phpMyAdmin devient `/usr/share/phpmyadmin`; modifie ton vhost en conséquence.
+
+---
+
+## Étape 7 - Test d'accès & vérification PHP
+
+Sur ta **VM cliente** (après avoir ajouté dans son `/etc/hosts` : tous les sous-domaines pointant sur l’IP serveur) :
+
+    curl -H "Host: www8.starfleet.lan"  [http://172.17.0.100/phpinfo.php](http://172.17.0.100/phpinfo.php)  | grep "PHP Version"  
+    curl -H "Host: www7.starfleet.lan"  [http://172.17.0.100/phpinfo.php](http://172.17.0.100/phpinfo.php)  | grep "PHP Version"
+    
+- Tu dois voir la version de PHP correspondante à chaque site.
+
+Test phpMyAdmin dans un navigateur :  
+`http://php.starfleet.lan/`
+
+Test page admin statique :  
+`http://admin.starfleet.lan/`
+
+---
+
+## Dépannages et difficultés rencontrées
+
+**Problèmes fréquents et résolus lors du projet :**
+
+- **Erreur 502 Bad Gateway** :  
+  - PHP-FPM éteint ou chemin du socket incorrect (corrigé en vérifiant `/run/php/` et la config NGINX).
+  - Mauvais utilisateur/config user dans NGINX (relu `user www-data;` dans nginx.conf).
+
+- **Page NGINX de base sur tous les domaines** :
+  - Vhosts/mauvais server_name ou DNS/hosts non configuré côté client.
+  - Solution : configurer `/etc/hosts` et vérifier les server_name dans chaque vhost.
+
+- **Résolution DNS/LAN** :
+  - Impossible d’accéder aux domaines sans résolution réseau adaptée. Résolu avec `/etc/hosts` côté VM cliente.
+- **Erreur "http_auth_ldap: Could not connect"** :
+  - Un bloc LDAP resté dans la conf (obligeant NGINX à authentifier sur un serveur LDAP inexistant).  
+  - Solution : commenter/supprimer toute la conf ldap_server et toute directive d’auth_ldap.
+- **Problème d’accès LAN sans Internet** :
+  - Le LAN VM n’a pas besoin d’internet pour communiquer. Il faut uniquement que les VMs soient sur le même réseau virtuel.
+- **phpMyAdmin : mot de passe oublié** :
+  - Les identifiants sont ceux des utilisateurs MySQL/MariaDB, à régénérer via `sudo mysql` si besoin.
+
+---
+
+## Ressources utiles
+
+- [NGINX.org Linux packages](https://nginx.org/en/linux_packages.html)
+- [PHP Sury.org & multi-versions](https://deb.sury.org/)
+- [Documentation NGINX + PHP-FPM](https://www.nginx.com/resources/wiki/start/topics/tutorials/phpfastcgionnginx/)
+- [phpMyAdmin](https://www.phpmyadmin.net/)
+
+---
+
+
+
+
+
+
+
+
 
 
 
