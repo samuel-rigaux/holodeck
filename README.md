@@ -6,6 +6,7 @@
 - [DNS](#dns)
 - [NGINX](#nginx)
 - [PHP](#php)
+- [Maria DB](#maria-db)
 
 
 ## Configuration des VMs
