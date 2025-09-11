@@ -28,12 +28,12 @@ Tout d'abord on crée et on configure les VMs sur VMWare de cette manière :
 - [Dépannage](#dépannage)
 - [Ressources](#ressources)
 ---
-### Installation du serveur DHCP
+## Installation du serveur DHCP
 
     apt update  
     apt install isc-dhcp-server -y
 
-### Configuration du DHCP
+## Configuration du DHCP
 
 Édite le fichier principal de configuration :
 
@@ -66,7 +66,7 @@ Exemple de configuration pour le réseau `172.16.0.0/16` :
 
 ---
 
-### Affectation de l’interface réseau
+## Affectation de l’interface réseau
 
 Définir sur quelle interface DHCP doit écouter (exemple : `ens34` pour le LAN) :
 
@@ -80,7 +80,7 @@ Renseigne la ligne suivante (sans # devant) :
 > Remplace `ens34` par le nom réel de ton interface LAN (vérifie avec `ip a`).
 
 
-### Lancement et vérification du service
+## Lancement et vérification du service
 
 Démarrer le service DHCP et vérifier son statut :
 
@@ -92,7 +92,7 @@ Démarrer le service DHCP et vérifier son statut :
     sudo journalctl -eu isc-dhcp-server  
     sudo tail -f /var/log/syslog
 
-### Dépannage
+## Dépannage
 
 - **Adresse du client en 169.254.x.x** : le client ne reçoit pas de bail DHCP. Vérifier la configuration, le service, le câblage/bridge réseau.
 - **Erreur "No subnet declaration for [interface]"** : il faut ajouter un bloc `subnet` adapté au réseau de cette interface dans `dhcpd.conf`.
@@ -105,7 +105,7 @@ Démarrer le service DHCP et vérifier son statut :
 
 ---
 
-### Ressources
+## Ressources
 
 - [Documentation Debian DHCP](https://wiki.debian.org/DHCP_Server)
 - [Manuel ISC dhcpd.conf](https://linux.die.net/man/5/dhcpd.conf)
@@ -128,7 +128,7 @@ Démarrer le service DHCP et vérifier son statut :
 
 ---
 
-### Installation de Bind9
+## Installation de Bind9
 
     sudo apt update  
     sudo apt install bind9 dnsutils
@@ -136,9 +136,9 @@ Démarrer le service DHCP et vérifier son statut :
 
 ---
 
-### Configuration globale de Bind9
+## Configuration globale de Bind9
 
-#### 1. **Autoriser ton réseau local**
+### 1. **Autoriser ton réseau local**
 
 Édite le fichier `/etc/bind/named.conf.options` :
 
@@ -168,7 +168,7 @@ Ajoute ces lignes dans `options { ... }` :
 
 ---
 
-### Déclaration de la zone DNS
+## Déclaration de la zone DNS
 
 Édite `/etc/bind/named.conf.local` :
 
@@ -183,7 +183,7 @@ Ajoute :
     };
 ---
 
-### Création du fichier de zone
+## Création du fichier de zone
 
 Crée le fichier de zone à partir d’un modèle :
 
@@ -213,23 +213,23 @@ Remplace le contenu ainsi :
 
 ---
 
-### Vérification et redémarrage du service
+## Vérification et redémarrage du service
 
-#### 1. **Vérifie la syntaxe de Bind9 et du fichier de zone**
+### 1. **Vérifie la syntaxe de Bind9 et du fichier de zone**
 
     named-checkconf  
     named-checkzone starfleet.lan /etc/bind/db.starfleet.lan
 
 (Aucune sortie = aucune erreur)
 
-#### 2. **Redémarre Bind9**
+### 2. **Redémarre Bind9**
 
     systemctl restart bind9  
     systemctl status bind9
 
 ---
 
-### Tester la résolution DNS
+## Tester la résolution DNS
 
 Depuis le serveur (et aussi, idéalement, depuis un client avec DNS configuré) :
 
@@ -239,7 +239,7 @@ Depuis le serveur (et aussi, idéalement, depuis un client avec DNS configuré)�
 
 ---
 
-### Dépannage
+## Dépannage
 
 - **Les clients ne résolvent rien ?**  
   Vérifie que :
@@ -261,7 +261,7 @@ Depuis le serveur (et aussi, idéalement, depuis un client avec DNS configuré)�
     sudo tail -f /var/log/syslog
 ---
 
-### Ressources
+## Ressources
 
 - [Wiki Debian Bind9](https://wiki.debian.org/Bind9)
 - [Doc Ubuntu Bind9](https://doc.ubuntu-fr.org/bind9)
