@@ -669,6 +669,192 @@ Test page admin statique :
 
 ---
 
+# Maria DB
+
+> Installation et Configuration de la dernière version MariaDB sur
+> Debian 12
+
+## Sommaire
+
+- [Objectif](#objectif)
+- [Pré-requis](#pré-requis)
+- [Étape 1 - Ajout du dépôt officiel MariaDB](#étape-1---ajout-du-dépôt-officiel-mariadb)
+- [Étape 2 - Installation de MariaDB](#étape-2---installation-de-mariadb)
+- [Étape 3 - Sécurisation de l’installation MariaDB](#étape-3---sécurisation-de-linstallation-mariadb)
+- [Étape 4 - Vérification de l’installation](#étape-4---vérification-de-linstallation)
+- [Étape 5 - Création de bases de données et utilisateurs](#étape-5---création-de-bases-de-données-et-utilisateurs)
+- [Étape 6 - Configuration de l’accès distant (optionnel)](#étape-6---configuration-de-laccès-distant-optionnel)
+- [Dépannages fréquents](#dépannages-fréquents)
+- [Ressources utiles](#ressources-utiles)
+
+---
+
+## Objectif
+
+Ce guide explique comment installer la version la plus récente de MariaDB sur Debian 12 en utilisant le dépôt officiel MariaDB (hors dépôts Debian standards).  
+Il couvre l’installation, la sécurisation, la création de bases et utilisateurs, ainsi que l’accès distant optionnel.
+
+---
+
+## Pré-requis
+
+- Machine Debian 12 avec accès root ou sudo
+- Connexion internet active (au moins pendant l’installation)
+- Connaissances basiques en ligne de commande Linux
+
+---
+
+## Étape 1 - Ajout du dépôt officiel MariaDB
+
+1. Installe les outils nécessaires pour ajouter des dépôts HTTPS :
+
+```
+sudo apt update
+```
+
+```
+sudo apt install software-properties-common dirmngr apt-transport-https ca-certificates -y
+```
+
+
+4. Importer la clé GPG officielle MariaDB :
+```
+sudo apt-key adv --fetch-keys 'https://mariadb.org/mariadb_release_signing_key.asc'
+```
+
+
+5. Ajouter le dépôt MariaDB adapté à Debian 12 (Bookworm) :
+
+```
+echo "deb [arch=amd64,arm64,ppc64el] https://mirror.mariadb.org/repo/11.1/debian bookworm main" | sudo tee /etc/apt/sources.list.d/mariadb.list
+```
+
+
+*Note : `11.1` correspond à la version majeure actuelle. Vérifie la dernière version stable sur le site officiel MariaDB.*
+
+---
+
+## Étape 2 - Installation de MariaDB
+
+Met à jour la liste des paquets avec le nouveau dépôt :
+
+    sudo apt update
+
+
+Installe MariaDB serveur et client :
+
+    sudo apt install mariadb-server mariadb-client
+
+---
+
+## Étape 3 - Sécurisation de l’installation MariaDB
+
+Lance l’outil interactif pour sécuriser MariaDB :
+
+    sudo mysql_secure_installation
+
+
+Tu seras amené à :
+
+- Définir ou modifier le mot de passe root MariaDB
+- Supprimer les utilisateurs anonymes
+- Désactiver la connexion root distante (recommandé)
+- Supprimer la base de test non sécurisée
+- Recharger les privilèges
+
+---
+
+## Étape 4 - Vérification de l’installation
+
+Vérifie que le service est actif :
+
+    sudo systemctl status mariadb
+
+
+Connecte-toi à MariaDB en root :
+
+sudo mysql -u root -p
+
+
+Vérifie la liste des bases de données :
+
+    SHOW DATABASES;
+
+
+---
+
+## Étape 5 - Création de bases de données et utilisateurs
+
+Pour créer une base et un utilisateur avec tous les privilèges :
+
+
+    CREATE DATABASE starfleet_db;  
+    CREATE USER 'starfleet_user'@'localhost' IDENTIFIED BY 'MotDePasseTrèsSûr!';  
+    GRANT ALL PRIVILEGES ON starfleet_db.* TO 'starfleet_user'@'localhost';  
+    FLUSH PRIVILEGES;  
+    EXIT;
+
+>  Dans mon cas le mot de passe sera 'root'
+
+
+---
+
+## Étape 6 - Configuration de l’accès distant (optionnel)
+
+Si tu souhaites accéder à MariaDB depuis d’autres machines partageant le réseau :
+
+1. Édite le fichier de configuration `/etc/mysql/mariadb.conf.d/50-server.cnf`.
+
+2. Modifie la ligne `bind-address` de :
+
+```
+bind-address = 127.0.0.1
+```
+en
+
+    bind-address = 0.0.0.0
+
+
+
+3. Crée un utilisateur MariaDB avec accès distant :
+
+```
+CREATE USER 'starfleet_user'@'172.17.0.%' IDENTIFIED BY 'MotDePasseTrèsSûr!';  
+GRANT ALL PRIVILEGES ON starfleet_db.* TO 'starfleet_user'@'172.17.0.%';  
+FLUSH PRIVILEGES;
+```
+
+4. Redémarre MariaDB pour prendre en compte ce changement :
+
+```
+sudo systemctl restart mariadb
+```
+
+---
+
+## Dépannages fréquents
+
+- **Impossible de démarrer MariaDB** : vois les logs dans `/var/log/mysql/error.log` ou utilise `journalctl -xeu mariadb.service`.
+- **Erreur d’accès refusé** : vérifier la définition des utilisateurs et privilèges dans MariaDB.
+- **MariaDB n’écoute pas sur le port 3306 distant** : vérifier `bind-address` et firewall (ports ouverts).
+- **Problèmes de clés GPG** : assure-toi que la clé est bien importée et que le système est à jour.
+
+---
+
+## Ressources utiles
+
+- [Site officiel MariaDB](https://mariadb.org/)
+- [Dépôt officiel MariaDB Linux](https://mariadb.org/download/)
+- [Guide MariaDB Debian](https://mariadb.com/kb/en/installing-mariadb-debian/)
+
+---
+
+
+
+
+
+
+
 
 
 
